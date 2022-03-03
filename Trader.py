@@ -1,84 +1,84 @@
-class BalanceTrader:
-    BTC = 0
-    USDT = 0
-    btc_price = 0
-    btc_factor = 0
+from abc import ABC, abstractmethod
+import logging
+
+
+class Trader(ABC):
+
+    def __init__(self):
+        self.btc_in_wallet = 0
+        self.usdt_in_wallet = 0
+        self.btc_price = 0
+
+    def trade(self, price, sentiment):
+        self.btc_price = price
+        self.take_decision(sentiment)
+
+    @abstractmethod
+    def take_decision(self, sentiment):
+        pass
+
+    def to_usdt(self):
+        return self.usdt_in_wallet + self.btc_price * self.btc_in_wallet
+
+
+class BalanceTrader(Trader):
 
     @staticmethod
     def with_budget_in_usd(usd, btc_factor=0.6):
         trader = BalanceTrader()
-        trader.USDT = usd
-        trader.BTC = 0
+        trader.usdt_in_wallet = usd
+        trader.btc_in_wallet = 0
         trader.btc_price = 0
         trader.btc_factor = btc_factor
         return trader
 
     def sell_btc(self, usdt):
-        self.BTC -= usdt / self.btc_price
-        self.USDT += usdt
+        self.btc_in_wallet -= usdt / self.btc_price
+        self.usdt_in_wallet += usdt
 
     def buy_btc(self, usdt):
-        self.BTC += usdt / self.btc_price
-        self.USDT -= usdt
+        self.btc_in_wallet += usdt / self.btc_price
+        self.usdt_in_wallet -= usdt
 
-    def decision(self):
-        btc_in_usdt = self.BTC * self.btc_price
-        money = btc_in_usdt + self.USDT
+    def take_decision(self, sentiment):
+        btc_in_usdt = self.btc_in_wallet * self.btc_price
+        money = btc_in_usdt + self.usdt_in_wallet
 
-        usdt_percentage = self.USDT / money
+        usdt_percentage = self.usdt_in_wallet / money
 
-        target_usdt = (1.0 - self.btc_factor) * self.USDT / usdt_percentage
+        target_usdt = (1.0 - self.btc_factor) * self.usdt_in_wallet / usdt_percentage
 
-        if target_usdt > self.USDT:
-            self.sell_btc(target_usdt - self.USDT)
+        if target_usdt > self.usdt_in_wallet:
+            self.sell_btc(target_usdt - self.usdt_in_wallet)
         else:
-            self.buy_btc(self.USDT - target_usdt)
-
-    def update(self, price, sentiment=None):
-        self.btc_price = price
-        self.decision()
-
-    def to_usdt(self):
-        return self.USDT + self.btc_price * self.BTC
+            self.buy_btc(self.usdt_in_wallet - target_usdt)
 
 
-class FearAndGreedTrader:
-    BTC = 0
-    USDT = 0
-    btc_price = 0
+class FearAndGreedTrader(Trader):
 
     @staticmethod
     def with_budget_in_usd(usd):
         trader = FearAndGreedTrader()
-        trader.USDT = usd
-        trader.BTC = 0
+        trader.usdt_in_wallet = usd
+        trader.btc_in_wallet = 0
         trader.btc_price = 0
         return trader
 
     def sell_btc(self, minimum, percentage):
-        trade = max(self.btc_price / minimum, percentage * self.BTC)
+        trade = max(self.btc_price / minimum, percentage * self.btc_in_wallet)
 
-        if self.BTC > trade:
-            self.BTC -= trade
-            self.USDT += trade * self.btc_price
-            print("\tSell {} BTC".format(trade))
-        else:
-            print("\tNo budget to SELL")
-
-    def hold(self):
-        print("\tHold !")
+        if self.btc_in_wallet > trade:
+            self.btc_in_wallet -= trade
+            self.usdt_in_wallet += trade * self.btc_price
 
     def buy_btc(self, minimum, percentage):
-        trade = max(minimum, percentage * self.USDT)
+        trade = max(minimum, percentage * self.usdt_in_wallet)
 
-        if self.USDT > trade:
-            self.USDT -= trade
-            self.BTC += trade / self.btc_price
-            print("\tBuy using {} USDT".format(trade))
-        else:
-            print("\tNo budget to BUY")
+        if self.usdt_in_wallet > trade:
+            self.usdt_in_wallet -= trade
+            self.btc_in_wallet += trade / self.btc_price
 
-    def decision(self, sentiment):
+    def take_decision(self, sentiment):
         if sentiment >= 80:
             self.sell_btc(1, 0.08)
             return
@@ -88,7 +88,6 @@ class FearAndGreedTrader:
             return
 
         if sentiment >= 40:
-            self.hold()
             return
 
         if sentiment >= 20:
@@ -97,9 +96,3 @@ class FearAndGreedTrader:
 
         self.buy_btc(1, 0.08)
 
-    def update(self, price, sentiment):
-        self.btc_price = price
-        self.decision(sentiment)
-
-    def to_usdt(self):
-        return self.USDT + self.btc_price * self.BTC
