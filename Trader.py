@@ -1,11 +1,55 @@
-class Trader:
+class BalanceTrader:
+    BTC = 0
+    USDT = 0
+    btc_price = 0
+    btc_factor = 0
+
+    @staticmethod
+    def with_budget_in_usd(usd, btc_factor=0.6):
+        trader = BalanceTrader()
+        trader.USDT = usd
+        trader.BTC = 0
+        trader.btc_price = 0
+        trader.btc_factor = btc_factor
+        return trader
+
+    def sell_btc(self, usdt):
+        self.BTC -= usdt / self.btc_price
+        self.USDT += usdt
+
+    def buy_btc(self, usdt):
+        self.BTC += usdt / self.btc_price
+        self.USDT -= usdt
+
+    def decision(self):
+        btc_in_usdt = self.BTC * self.btc_price
+        money = btc_in_usdt + self.USDT
+
+        usdt_percentage = self.USDT / money
+
+        target_usdt = (1.0 - self.btc_factor) * self.USDT / usdt_percentage
+
+        if target_usdt > self.USDT:
+            self.sell_btc(target_usdt - self.USDT)
+        else:
+            self.buy_btc(self.USDT - target_usdt)
+
+    def update(self, price, sentiment=None):
+        self.btc_price = price
+        self.decision()
+
+    def to_usdt(self):
+        return self.USDT + self.btc_price * self.BTC
+
+
+class FearAndGreedTrader:
     BTC = 0
     USDT = 0
     btc_price = 0
 
     @staticmethod
     def with_budget_in_usd(usd):
-        trader = Trader()
+        trader = FearAndGreedTrader()
         trader.USDT = usd
         trader.BTC = 0
         trader.btc_price = 0

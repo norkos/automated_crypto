@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from Trader import Trader
+from Trader import FearAndGreedTrader, BalanceTrader
 
 
 def get_sentiment(file_name):
@@ -34,7 +34,7 @@ def get_ordered_dates(sentiment, prices):
 
 
 def main():
-    trader = Trader.with_budget_in_usd(1000)
+    trader = BalanceTrader.with_budget_in_usd(1000)
 
     sentiment = get_sentiment('btc_sentiment.json')
     prices = get_stock_prices('btc_price.json')
@@ -43,7 +43,7 @@ def main():
     for date in dates:
         print("Date {} with price {} USDT and sentiment {}".format(date, prices[date], sentiment[date]))
         trader.update(prices[date], sentiment[date])
-        print("Status after:{} USDT, {} BTC".format(str(trader.USDT), str(trader.BTC)))
+        print("Closing day: {} USDT, {} BTC".format(str(trader.USDT), str(trader.BTC)))
         print()
 
     print("Final result: {} USD".format(round(trader.to_usdt(), 2)))
