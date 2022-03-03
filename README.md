@@ -1,0 +1,1 @@
+Project inspired by https://github.com/apinx/rainbow-trader
